@@ -105,19 +105,35 @@ function pretty_list_dir(){
 	list_dir  $access_token $1|jq -r '(["NAME", "FILEID"]),(.metadata.contents[]|[.name, .fileid])|@tsv'
 }
 
+function download_file(){
+  ### $1 refers to the file id
+  ### $2 refers to the AUTH_ID, authinication id
+  tmpfile=$(mktemp)
+  $CURL_BIN $CURL_OPT --location -XPOST "https://api.pcloud.com/getfilelink?fileid=$1&auth=$2" \
+  -H "Accept: application/json, text/javascript, */*; q=0.01" \
+  -H "Accept-Language: en-US,en;q=0.9,ar;q=0.8" \
+  -H "Connection: keep-alive" \
+  --compressed > "${tmpfile}"
+
+  filepath=$(jq -r '.path' "${tmpfile}")
+  filehost=$(jq -r '.hosts[0]' "${tmpfile}")
+  filename="${filepath##*/}"
+  $CURL_BIN $CURL_OPT -o "${filename}" https://"${filehost}""${filepath}"
+  rm -rf "${tmpfile}"
+}
 ##############################################
 ###########START##############################
 ##############################################
 
 # get the authntication ID
 AUTH_ID=$(login|jq -r '.auth')
-
+#echo auth_id is $AUTH_ID
 # get the assoociated code
 code=$(echo "$(get_code_token)"|grep 'class="code"'| sed 's/<[^>]*>//g'|head -1)
-
+#echo code is $code
 # get the access token
 access_token=$(get_access_token $code |jq -r '.access_token')
-
+#echo access_token is $access_token
 # read cli options
 ! getopt --test > /dev/null 
 if [[ ${PIPESTATUS[0]} -ne 4 ]]; then
@@ -125,8 +141,8 @@ if [[ ${PIPESTATUS[0]} -ne 4 ]]; then
     exit 1
 fi
 
-LONGOPTS=list-root-dir,list-dir:,help
-OPTIONS=lr:h
+LONGOPTS=list-root-dir,list-dir:,download-file:,help
+OPTIONS=lr:d:h
 ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     exit 2
@@ -141,6 +157,10 @@ while true; do
         -r|--list-dir)
             pretty_list_dir $2
 	    #list_dir $access_token $2
+            shift 2
+            ;;
+        -d| --download-file)
+            download_file $2 $AUTH_ID
             shift 2
             ;;
         -h|--help)
