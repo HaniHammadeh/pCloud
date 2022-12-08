@@ -23,6 +23,7 @@ API_LOGIN="https://api.pcloud.com/login"
 API_AUTH_URL="${END_POINT}/oauth2"
 API_AUTH_TOKEN_URL="https://api.pcloud.com/oauth2_token"
 API_LIST_FOLDER_URL="https://api.pcloud.com/listfolder"
+API_UPLOAD_FILE="https://api17.pcloud.com/uploadfile"
 CONFIG_FILE="./.pcloud_config"
 VERSION="1.0"
 
@@ -121,6 +122,20 @@ function download_file(){
   $CURL_BIN $CURL_OPT -o "${filename}" https://"${filehost}""${filepath}"
   rm -rf "${tmpfile}"
 }
+
+function upload_file(){
+#### $1 filename
+#### $2 folder id
+#### The function will return the file id
+echo $1, $2
+$CURL_BIN  -XPOST "${API_UPLOAD_FILE}?folderid=$2&auth=${AUTH_ID}" \
+  -H "Accept: application/json, text/javascript, */*; q=0.01" \
+  -H "Accept-Language: en-US,en;q=0.9,ar;q=0.8" \
+  -H "Connection: keep-alive" \
+  -H "Content-Type: multipart/form-data" \
+  -F "filename=@$1" \
+  --compressed
+}
 ##############################################
 ###########START##############################
 ##############################################
@@ -141,8 +156,8 @@ if [[ ${PIPESTATUS[0]} -ne 4 ]]; then
     exit 1
 fi
 
-LONGOPTS=list-root-dir,list-dir:,download-file:,help
-OPTIONS=lr:d:h
+LONGOPTS=list-root-dir,list-dir:,download-file:,upload-file:,folder-id:,help
+OPTIONS=lr:d:u:i:h
 ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     exit 2
@@ -162,6 +177,10 @@ while true; do
         -d| --download-file)
             download_file $2 $AUTH_ID
             shift 2
+            ;;
+        -u| --upload-file)
+            upload_file $2 $4
+            shift 4
             ;;
         -h|--help)
             usage
