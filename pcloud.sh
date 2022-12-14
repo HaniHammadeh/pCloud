@@ -27,6 +27,7 @@ API_UPLOAD_FILE="https://api.pcloud.com/uploadfile"
 API_FILE_PUBLIC_LINK="https://api.pcloud.com/getfilepublink"
 API_FOLDER_PUBLIC_LINK="https://api.pcloud.com/getfolderpublink"
 API_LIST_PUBLIC_LINKS="https://api.pcloud.com/listpublinks"
+API_FOLDER_CREATE_FOLDER_IF_NOT_EXIST="https://api.pcloud.com/createfolderifnotexists"
 CONFIG_FILE="./.pcloud_config"
 VERSION="1.0"
 
@@ -161,6 +162,16 @@ function get_folder_public_link(){
   -H "Connection: keep-alive" \
   --compressed | $JQ_BIN '.link'
 }
+function create_folder_ifnotexists() {
+  ##### $1 is the parent folder id
+  ##### $2 is the folder name
+  echo $1 $2
+  $CURL_BIN "${API_FOLDER_CREATE_FOLDER_IF_NOT_EXIST}?folderid=$1&name=$2&auth=${AUTH_ID}" \
+  -H "Accept: application/json, text/javascript, */*; q=0.01" \
+  -H "Accept-Language: en-US,en;q=0.9,ar;q=0.8" \
+  -H "Connection: keep-alive" \
+  --compressed | $JQ_BIN -r '.metadata'
+}
 ##############################################
 ###########START##############################
 ##############################################
@@ -181,8 +192,8 @@ if [[ ${PIPESTATUS[0]} -ne 4 ]]; then
     exit 1
 fi
 
-LONGOPTS=list-root-dir,list-dir:,download-file:,upload-file:,folder-id:,share-file:,list-public-links,share-folder:,help
-OPTIONS=lr:d:u:i:s:LS:h
+LONGOPTS=list-root-dir,list-dir:,download-file:,upload-file:,folder-id:,share-file:,list-public-links,share-folder:,create-folder:,help
+OPTIONS=lr:d:u:i:s:LS:C:h
 ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     exit 2
@@ -219,6 +230,10 @@ while true; do
             get_folder_public_link $2 
             shift 2
             ;;
+        -C| --create-folder)
+            create_folder_ifnotexists $4 $5
+            shift 2
+            ;;
         -h|--help)
             usage
             shift
@@ -228,7 +243,7 @@ while true; do
             break
             ;;
         *)
-            echo "Error"
+            echo "Error ---------------"
             exit 3
             ;;
     esac
