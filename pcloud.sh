@@ -45,7 +45,6 @@ if [ ! -z $NOT_FOUND ]; then
   echo -e "Error: Required program could not be found: $NOT_FOUND"
   exit 1
 fi
-###
 ### check if the config file is exist or not
 
 if [ ! -s "${CONFIG_FILE}" ]; then
