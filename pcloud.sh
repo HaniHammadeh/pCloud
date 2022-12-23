@@ -15,9 +15,9 @@
 # GNU General Public License for more details.
 
 
-CURL_BIN=$(which curl) 
+CURL_BIN=$(command -v curl) 
 CURL_OPT=' -s'
-JQ_BIN=$(which jq)
+JQ_BIN=$(command -v jq)
 END_POINT="https://u.pcloud.com"
 API_LOGIN="https://api.pcloud.com/login"
 API_AUTH_URL="${END_POINT}/oauth2"
@@ -32,7 +32,34 @@ API_RENAME_FOLDER="https://api.pcloud.com/renamefolder"
 CONFIG_FILE="./.pcloud_config"
 VERSION="1.0"
 
+## declaring the required binaries to start
+declare -A BIN_DEPS="curl jq"
+NOT_FOUND=""
+for i in ${BIN_DEPS[@]}; do
+  command -v $i > /dev/null 
+  if [ $? != 0 ]; then
+    NOT_FOUND="${i} ${NOT_FOUND}"
+  fi
+done
+if [ ! -z $NOT_FOUND ]; then
+  echo -e "Error: Required program could not be found: $NOT_FOUND"
+  exit 1
+fi
+###
+### check if the config file is exist or not
+
+if [ ! -s "${CONFIG_FILE}" ]; then
+  echo -e "Error: The config file *${CONFIG_FILE}* is not exist or empty \n"
+  echo -e "sample config file show have the below parameters \n"
+  echo -e "EMAIL_ADDRESS= 'Your pCloud Email Address' \n"
+  echo -e "PASSWORD='Your pCloud Login password' \n"
+  echo -e "CLIENT_ID=  'Your APP pCloud Client ID' \n"
+  echo -e "CLIENT_SECRET='Your APP pCloud Client Secret' \n"
+  exit 1
+fi
+
 source "${CONFIG_FILE}"
+
 #CONFIG_FILE has the following parameters:
 ##EMAIL_ADDRESS=" Your pCloud Email Address"
 ##PASSWORD="Your pCloud Login password"
@@ -67,7 +94,8 @@ $CURL_BIN  $CURL_OPT "${API_LOGIN}" \
 #login
 
 function get_code_token() {
-$CURL_BIN $CURL_OPT "${END_POINT}/oauth2/authorize?client_id=$CLIENT_ID&response_type=code&auth=$AUTH_ID" \
+$CURL_BIN $CURL_OPT "${END_POINT}/oauth2/authorize?client_id=$CLIENT_ID\
+&response_type=code&auth=$AUTH_ID" \
   -H 'Accept: text/html,application/xhtml+xml,application/xml' \
   -H 'Accept-Language: en-US,en;q=0.9' \
   -H 'Connection: keep-alive' \
@@ -94,9 +122,9 @@ $CURL_BIN $CURL_OPT --location --request POST "${API_LIST_FOLDER_URL}" \
 }
 
 function pretty_list_root_folder(){
-  list_root_folder $access_token|jq -r '(["PATH","NAME","FOLDERID"]),(.metadata.contents[]|[.path, .name, .folderid])|@tsv'
+  list_root_folder $access_token|jq -r '''(["PATH","NAME","FOLDERID"]),
+  (.metadata.contents[]|[.path, .name, .folderid])|@tsv'''
 }
-
 
 function list_dir(){
 
@@ -108,7 +136,8 @@ curl -s --location --request POST "${API_LIST_FOLDER_URL}" \
 
 }
 function pretty_list_dir(){
-	list_dir  $access_token $1|jq -r '(["NAME", "FILEID"]),(.metadata.contents[]|[.name, .fileid])|@tsv'
+	list_dir  $access_token $1|jq -r '''(["NAME", "FILEID"]),
+  (.metadata.contents[]|[.name, .fileid])|@tsv'''
 }
 
 function download_file(){
@@ -202,7 +231,9 @@ if [[ ${PIPESTATUS[0]} -ne 4 ]]; then
     exit 1
 fi
 
-LONGOPTS=list-root-dir,list-dir:,download-file:,upload-file:,folder-id:,share-file:,list-public-links,share-folder:,create-folder:,rename-folder:,help
+LONGOPTS=list-root-dir,list-dir:,download-file:,upload-file:,folder-id:,\
+share-file:,list-public-links,share-folder:,create-folder:,rename-folder:,\
+help
 OPTIONS=lr:d:u:i:s:LS:C:R:h
 ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
