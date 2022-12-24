@@ -160,7 +160,7 @@ function upload_file(){
 #### $1 filename
 #### $2 folder id
 #### The function will return the file id
-echo $1, $2
+
 $CURL_BIN  -XPOST "${API_UPLOAD_FILE}?folderid=$2&auth=${AUTH_ID}" \
   -H "Accept: application/json, text/javascript, */*; q=0.01" \
   -H "Accept-Language: en-US,en;q=0.9,ar;q=0.8" \
@@ -216,7 +216,6 @@ function rename_folder(){
 if [ ! $# -gt 0 ]; then
   usage
 fi
-
 # get the authntication ID
 AUTH_ID=$(login|jq -r '.auth')
 #echo auth_id is $AUTH_ID
@@ -237,7 +236,8 @@ LONGOPTS=list-root-dir,list-dir:,download-file:,upload-file:,folder-id:,\
 share-file:,list-public-links,share-folder:,create-folder:,rename-folder:,\
 help
 OPTIONS=lr:d:u:i:s:LS:C:R:h
-! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
+PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
+
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     exit 2
 fi
@@ -262,8 +262,18 @@ while true; do
             shift 2
             ;;
         -u| --upload-file)
+            if [ $# -lt 5 ]; then
+              echo -e "Error: Usage $0 --upload-file <file name> --folder-id" \
+                       "<folder-id>"
+              exit 2
+            fi
             upload_file $2 $4
-            shift 4
+            #### $1 filename
+            #### $2 folder id
+            shift ## -u
+            shift ## <file name>
+            shift ## --folder-id
+            shift ## <folder-id>
             ;;
         -s| --share-file)
             get_file_public_link $2 
