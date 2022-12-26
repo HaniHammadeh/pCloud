@@ -64,16 +64,27 @@ source "${CONFIG_FILE}"
 ##PASSWORD="Your pCloud Login password"
 ##CLIENT_ID=" Your APP pCloud Client ID"
 ##CLIENT_SECRET="Your APP pCloud Client Secret"
-
+function error ()
+{
+  echo -e "Error: Usage $0 $1"
+  exit 1
+}
 function usage
 {
     echo -e "pCloud Uploader v$VERSION"
     echo -e "Hani Hammadeh - @hanihammadeh\n"
     echo -e "Usage: $0 [PARAMETERS] COMMAND..."
     echo -e "\nCommands:"
-    echo -e "\t --list   <REMOTE_DIR_ID> "
-    echo -e "\t --list-remote-dir "
-    echo -e "\t --help   show this help message"
+    echo -e "\t -l, --list              \t <REMOTE_FOLDER_ID>"
+    echo -e "\t -r, --list-remote-dir   \t <REMOTE_FOLDER_ID>"
+    echo -e "\t -d, --download-file     \t <REMOTE_FILE_ID>"
+    echo -e "\t -u, --upload-file       \t <file name> --folder-id <REMOTE_FOLDER_ID>"
+    echo -e "\t -s, --share-file        \t <REMOTE_FILE_ID>"
+    echo -e "\t -S, --share-folder      \t <REMOTE_FOLDER_ID>"
+    echo -e "\t -L, --list-public-links \t"
+    echo -e "\t -C, --create-folder     \t <REMOTE_FOLDER_ID> <REMOTE_FOLDER_NAME>"
+    echo -e "\t -R, --rename-folder     \t <REMOTE_FOLDER_ID> <NEW_FOLDER_NAME>"
+    echo -e "\t -h, --help              \t show this help message"
     echo -en "\nFor more info and examples, please see the README file.\n\n"
     exit 1
 }
@@ -253,6 +264,9 @@ while true; do
             shift
             ;;
         -r|--list-dir)
+            if [ $# -lt 2 ]; then
+              error ""
+            fi
             pretty_list_dir $2
 	    #list_dir $access_token $2
             shift 2
@@ -284,6 +298,11 @@ while true; do
             shift 2
             ;;
         -C| --create-folder)
+            if [ $# -lt 4 ]; then
+              msg="-C, --create-folder  <REMOTE_FOLDER_ID> <REMOTE_FOLDER_NAME>"
+              error "${msg}"
+              exit 1
+            fi
             create_folder_ifnotexists $4 $5
             shift 2
             ;;
